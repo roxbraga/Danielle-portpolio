@@ -9,6 +9,7 @@ import ToolsSection from './components/ToolsSection.vue'
 import TestimonialsSection from './components/TestimonialsSection.vue'
 import FooterSection from './components/FooterSection.vue'
 import ContactModal from './components/ContactModal.vue'
+import WorkHighlights from './components/WorkHighlights.vue'
 
 const isContactOpen = ref(false)
 
@@ -55,6 +56,7 @@ onUnmounted(() => {
       <HeroSection />
       <AboutSection />
       <ServicesSection />
+      <WorkHighlights />
       <ToolsSection />
       <TestimonialsSection />
     </main>
