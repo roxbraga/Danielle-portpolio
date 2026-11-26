@@ -1,10 +1,16 @@
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, reactive, onUnmounted } from 'vue'
 import ProjectDetailsModal from './ProjectDetailsModal.vue'
 import type { WorkProject } from '../types/workProject'
 
 const selectedProject = ref<WorkProject | null>(null)
+
+const imageIndexes = reactive<Record<number, number>>({})
+const hoverIntervals = new Map<
+  number,
+  ReturnType<typeof setInterval>
+>()
 
 const projects: WorkProject[] = [
   {
@@ -17,7 +23,7 @@ const projects: WorkProject[] = [
       'Created and maintained a Notion-based tracking system for large retailer onboarding and Free Fill requests. Connected email and Quo (US SMS) communication workflows to help automatically update tracking records when responses are received, making it easier to monitor brand confirmations, communication history, and pending follow-up actions.',
     coverImage: '/order-tracker-1.jpg',
     images: [
-      '/order-tracker-1.jpg'
+      '/order-tracker-1.jpg',
     ],
     tools: ['Notion', 'Email', 'Quo'],
     skills: [
@@ -76,7 +82,7 @@ const projects: WorkProject[] = [
       "Provided customer support through the Airgoods website, assisting brands with platform-related concerns, including shipping inquiries and Shopify integration issues. Explained shipping payment options and shipping label processes. For integration-related concerns, investigated product import and inventory errors, reset product linking between Airgoods and Shopify, and accepted affected orders on the customer's behalf.",
     coverImage: '/retailer-report-1.jpg',
     images: [
-      '/retailer-report-1.jpg',
+      '/retailer-report-1.png',
       '/retailer-report-2.jpg',
     ],
     tools: ['Airgoods Website', 'Shopify', 'Intercom'],
@@ -99,6 +105,32 @@ const projects: WorkProject[] = [
   },
 ]
 
+const startImagePreview = (project: WorkProject) => {
+  if (project.images.length <= 1) return
+  if (hoverIntervals.has(project.id)) return
+
+  imageIndexes[project.id] = 0
+
+  const interval = setInterval(() => {
+    imageIndexes[project.id] =
+      ((imageIndexes[project.id] ?? 0) + 1) %
+      project.images.length
+  }, 1200)
+
+  hoverIntervals.set(project.id, interval)
+}
+
+const stopImagePreview = (project: WorkProject) => {
+  const interval = hoverIntervals.get(project.id)
+
+  if (interval) {
+    clearInterval(interval)
+    hoverIntervals.delete(project.id)
+  }
+
+  imageIndexes[project.id] = 0
+}
+
 const openProject = (project: WorkProject) => {
   selectedProject.value = project
 }
@@ -106,6 +138,11 @@ const openProject = (project: WorkProject) => {
 const closeProject = () => {
   selectedProject.value = null
 }
+
+onUnmounted(() => {
+  hoverIntervals.forEach((interval) => clearInterval(interval))
+  hoverIntervals.clear()
+})
 </script>
 
 <template>
@@ -134,17 +171,20 @@ const closeProject = () => {
         >
           <article class="work-card">
 
-            <!-- CARD IMAGE -->
-            <div class="work-card-image">
+            <!-- CARD IMAGE WITH HOVER SLIDESHOW -->
+            <div
+              class="work-card-image"
+              @mouseenter="startImagePreview(project)"
+              @mouseleave="stopImagePreview(project)"
+            >
               <img
-                :src="project.coverImage"
+                :src="
+                  project.images[imageIndexes[project.id] ?? 0]
+                  || project.coverImage
+                "
                 :alt="project.title"
                 loading="lazy"
               />
-
-              <!-- <span class="work-project-number">
-                0{{ project.id }}
-              </span> -->
             </div>
 
             <!-- CARD CONTENT -->

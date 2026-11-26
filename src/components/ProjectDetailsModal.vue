@@ -19,20 +19,21 @@ const emit = defineEmits<{
 }>()
 
 const activeImageIndex = ref(0)
+const isFullscreen = ref(false)
 
 const activeImage = computed(() => {
   return props.project?.images[activeImageIndex.value] ?? ''
 })
 
 const nextImage = () => {
-  if (!props.project) return
+  if (!props.project || props.project.images.length <= 1) return
 
   activeImageIndex.value =
     (activeImageIndex.value + 1) % props.project.images.length
 }
 
 const previousImage = () => {
-  if (!props.project) return
+  if (!props.project || props.project.images.length <= 1) return
 
   activeImageIndex.value =
     (activeImageIndex.value - 1 + props.project.images.length) %
@@ -43,10 +44,32 @@ const selectImage = (index: number) => {
   activeImageIndex.value = index
 }
 
+const openFullscreen = () => {
+  if (!activeImage.value) return
+  isFullscreen.value = true
+}
+
+const closeFullscreen = () => {
+  isFullscreen.value = false
+}
+
+const closeModal = () => {
+  isFullscreen.value = false
+  emit('close')
+}
+
 const handleKeyboard = (event: KeyboardEvent) => {
   if (!props.project) return
 
-  if (event.key === 'Escape') emit('close')
+  if (event.key === 'Escape') {
+    if (isFullscreen.value) {
+      closeFullscreen()
+    } else {
+      closeModal()
+    }
+    return
+  }
+
   if (event.key === 'ArrowRight') nextImage()
   if (event.key === 'ArrowLeft') previousImage()
 }
@@ -55,6 +78,7 @@ watch(
   () => props.project,
   (project) => {
     activeImageIndex.value = 0
+    isFullscreen.value = false
 
     if (typeof document !== 'undefined') {
       document.body.style.overflow = project ? 'hidden' : ''
@@ -78,7 +102,7 @@ onBeforeUnmount(() => {
     <div
       v-if="project"
       class="project-modal-overlay"
-      @click.self="emit('close')"
+      @click.self="closeModal"
     >
       <div
         class="project-modal-container"
@@ -92,7 +116,7 @@ onBeforeUnmount(() => {
           type="button"
           class="project-modal-close"
           aria-label="Close project details"
-          @click="emit('close')"
+          @click="closeModal"
         >
           &times;
         </button>
@@ -167,10 +191,24 @@ onBeforeUnmount(() => {
           <div class="project-modal-gallery">
 
             <div class="project-main-image">
-              <img
-                :src="activeImage"
-                :alt="`${project.title} screenshot ${activeImageIndex + 1}`"
-              />
+
+              <!-- CLICKABLE MAIN IMAGE -->
+              <button
+                type="button"
+                class="project-main-image-trigger"
+                aria-label="View screenshot in fullscreen"
+                @click="openFullscreen"
+              >
+                <img
+                  :src="activeImage"
+                  :alt="`${project.title} screenshot ${activeImageIndex + 1}`"
+                />
+
+                <span class="project-image-zoom-hint">
+                  <span aria-hidden="true">⛶</span>
+                  Click to enlarge
+                </span>
+              </button>
 
               <span class="project-image-counter">
                 {{ activeImageIndex + 1 }}
@@ -186,6 +224,7 @@ onBeforeUnmount(() => {
                 type="button"
                 class="project-gallery-arrow"
                 aria-label="Previous screenshot"
+                :disabled="project.images.length <= 1"
                 @click="previousImage"
               >
                 ‹
@@ -217,6 +256,7 @@ onBeforeUnmount(() => {
                 type="button"
                 class="project-gallery-arrow"
                 aria-label="Next screenshot"
+                :disabled="project.images.length <= 1"
                 @click="nextImage"
               >
                 ›
@@ -242,7 +282,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="project-modal-done-btn"
-            @click="emit('close')"
+            @click="closeModal"
           >
             Close
             <span aria-hidden="true">→</span>
@@ -251,6 +291,55 @@ onBeforeUnmount(() => {
         </div>
 
       </div>
+
+      <!-- FULLSCREEN IMAGE VIEWER -->
+      <Transition name="fullscreen-image">
+        <div
+          v-if="isFullscreen"
+          class="project-image-fullscreen"
+          @click.self="closeFullscreen"
+        >
+          <button
+            type="button"
+            class="project-fullscreen-close"
+            aria-label="Close fullscreen image"
+            @click="closeFullscreen"
+          >
+            &times;
+          </button>
+
+          <button
+            v-if="project.images.length > 1"
+            type="button"
+            class="project-fullscreen-arrow project-fullscreen-prev"
+            aria-label="Previous image"
+            @click="previousImage"
+          >
+            ‹
+          </button>
+
+          <img
+            :src="activeImage"
+            :alt="`${project.title} screenshot ${activeImageIndex + 1}`"
+            class="project-fullscreen-img"
+          />
+
+          <button
+            v-if="project.images.length > 1"
+            type="button"
+            class="project-fullscreen-arrow project-fullscreen-next"
+            aria-label="Next image"
+            @click="nextImage"
+          >
+            ›
+          </button>
+
+          <span class="project-fullscreen-counter">
+            {{ activeImageIndex + 1 }} / {{ project.images.length }}
+          </span>
+        </div>
+      </Transition>
+
     </div>
   </Transition>
 </template>
